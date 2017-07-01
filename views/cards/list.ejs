@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Card List</title>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body>
+<h2>Liste des cartes</h2>
+<table>
+    <% for(let c of cards){%>
+    <tr>
+        <td><a href="/cards/<%=c.id%>"><%=c.title%></td>
+    </tr>
+    <% } %>
+</table>
+</body>
+</html>
