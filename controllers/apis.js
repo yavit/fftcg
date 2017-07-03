@@ -1,4 +1,4 @@
-var Card = require('../models/card');
+const Card = require('../models/card');
 
 module.exports.list = function(req, res, next){
     Card.find()
@@ -28,12 +28,14 @@ module.exports.query = function(req, res, next){
     let qjob = req.body.job || wildcard;
     let qtitle = req.body.title || wildcard;
     let qcost = req.body.cost || wildcard;
-    let qcategory = req.body.category || wildcard;
+    let qcategory = [];
     let qelement = req.body.element || wildcard;
     let qcapacity = [];
     if(req.body.capacity){
         qcapacity = req.body.capacity.split(',');
-        console.log(qcapacity);
+    }
+    if(req.body.category){
+        qcategory = req.body.category.split(',');
     }
 
     let qserial = "";
@@ -57,8 +59,7 @@ module.exports.query = function(req, res, next){
     }
     qserial= new RegExp(qserial);
 
-    console.log(qserial);
-    Card.find({'type':qtype, 'job':qjob, 'title':qtitle, 'cost':qcost, 'serial':qserial})
+    Card.find({'type':qtype, 'job':qjob, 'title':qtitle, 'cost':qcost, 'serial':qserial, 'element': qelement})
     .then(card => {
         if (!card) {
             return next(); // 404
@@ -66,14 +67,36 @@ module.exports.query = function(req, res, next){
         else{
             qcapacity.forEach(cap => {
                 try{
-                    var r = new RegExp(cap.toString(), 'i');
+                    const r = new RegExp(cap.toString(), 'i');
                     card = card.filter(e => {
-                        return e.actions.search(r) === -1 ? false : true;
+                        return e.actions.search(r) !== -1;
                     });
                 }
                 catch(e){
                     res.statusCode = 409;
                     res.statusMessage = 'Bad Request in capacity: "'+cap+'" ';
+                    //console.log(e);
+                    card = {};
+                }
+            });
+            qcategory.forEach(cat => {
+                try{
+                    let rule = '^'.concat(cat.concat('$'));
+                    const r = new RegExp(rule, 'i');
+                    card = card.filter(e => {
+                        let ecat = e.category.split(',');
+                        let bool = false;
+                        ecat.forEach(c => {
+                            if(c.search(r) !== -1){
+                                bool = true;
+                            }
+                        });
+                        return bool;
+                    });
+                }
+                catch(e){
+                    res.statusCode = 409;
+                    res.statusMessage = 'Bad Request in category: "'+cat+'" ';
                     //console.log(e);
                     card = {};
                 }
@@ -95,7 +118,7 @@ module.exports.getJobs = function(req, res, next){
             }
         });
         jobs = jobs.filter(e => {
-            return e !== "" ? true : false;
+            return e !== "";
         });
         jobs.sort();
         res.json({"jobs":jobs});
@@ -113,10 +136,31 @@ module.exports.getCosts = function(req, res, next){
             }
         });
         costs = costs.filter(e => {
-            return e !== "" ? true : false;
+            return e !== "";
         });
         costs = costs.sort();
     res.json({"costs":costs});
     })
     .catch(next);
+};
+
+module.exports.getCategories = function(req, res, next){
+    let cats = [];
+    Card.find()
+        .then(card => {
+            card.forEach(c =>{
+                let tab = c.category.split(",");
+                tab.forEach(e => {
+                    if(!cats.includes(e)){
+                        cats.push(e);
+                    }
+                });
+            });
+            cats = cats.filter(e => {
+                return e !== "";
+            });
+            cats = cats.sort();
+            res.json({"categories":cats});
+        })
+        .catch(next);
 };
